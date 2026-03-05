@@ -1,0 +1,96 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  detect-changes:
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      loan: ${{ steps.filter.outputs.loan }}
+      payment: ${{ steps.filter.outputs.payment }}
+
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Detect service changes
+        uses: dorny/paths-filter@v2
+        id: filter
+
+        with:
+          filters: |
+            loan:
+              - 'loan-service/**'
+            payment:
+              - 'payment-service/**'
+
+  build:
+
+    needs: detect-changes
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Build Loan Service
+        if: needs.detect-changes.outputs.loan == 'true'
+        run: |
+          echo "Building loan-service"
+
+      - name: Build Payment Service
+        if: needs.detect-changes.outputs.payment == 'true'
+        run: |
+          echo "Building payment-service"
+
+  package:
+
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Package Loan
+        run: |
+          if [ -d loan-service ]; then
+            echo "Packaging loan-service"
+            tar -czf loan-service.tar.gz loan-service
+          fi
+
+      - name: Package Payment
+        run: |
+          if [ -d payment-service ]; then
+            echo "Packaging payment-service"
+            tar -czf payment-service.tar.gz payment-service
+          fi
+
+  deploy:
+
+    needs: package
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Deploy Loan Service
+        run: |
+          if [ -d loan-service ]; then
+            echo "Deploying loan-service"
+            ls loan-service
+          fi
+
+      - name: Deploy Payment Service
+        run: |
+          if [ -d payment-service ]; then
+            echo "Deploying payment-service"
+            ls payment-service
+          fi
