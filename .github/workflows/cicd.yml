@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Monorepo
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 jobs:
 
   detect-changes:
-
     runs-on: ubuntu-latest
 
     outputs:
@@ -30,67 +29,93 @@ jobs:
             payment:
               - 'payment-service/**'
 
-  build:
+  build-loan:
 
     needs: detect-changes
+    if: needs.detect-changes.outputs.loan == 'true'
+
     runs-on: ubuntu-latest
 
     steps:
-
       - uses: actions/checkout@v3
 
       - name: Build Loan Service
-        if: needs.detect-changes.outputs.loan == 'true'
         run: |
           echo "Building loan-service"
 
-      - name: Build Payment Service
-        if: needs.detect-changes.outputs.payment == 'true'
-        run: |
-          echo "Building payment-service"
 
-  package:
+  build-payment:
 
-    needs: build
+    needs: detect-changes
+    if: needs.detect-changes.outputs.payment == 'true'
+
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
 
+      - name: Build Payment Service
+        run: |
+          echo "Building payment-service"
+
+
+  package-loan:
+
+    needs: build-loan
+    if: needs.detect-changes.outputs.loan == 'true'
+
+    runs-on: ubuntu-latest
+
+    steps:
       - uses: actions/checkout@v3
 
       - name: Package Loan
         run: |
-          if [ -d loan-service ]; then
-            echo "Packaging loan-service"
-            tar -czf loan-service.tar.gz loan-service
-          fi
+          echo "Packaging loan-service"
+          tar -czf loan-service.tar.gz loan-service
 
-      - name: Package Payment
-        run: |
-          if [ -d payment-service ]; then
-            echo "Packaging payment-service"
-            tar -czf payment-service.tar.gz payment-service
-          fi
 
-  deploy:
+  package-payment:
 
-    needs: package
+    needs: build-payment
+    if: needs.detect-changes.outputs.payment == 'true'
+
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
 
+      - name: Package Payment
+        run: |
+          echo "Packaging payment-service"
+          tar -czf payment-service.tar.gz payment-service
+
+
+  deploy-loan:
+
+    needs: package-loan
+    if: needs.detect-changes.outputs.loan == 'true'
+
+    runs-on: ubuntu-latest
+
+    steps:
       - uses: actions/checkout@v3
 
       - name: Deploy Loan Service
         run: |
-          if [ -d loan-service ]; then
-            echo "Deploying loan-service"
-            ls loan-service
-          fi
+          echo "Deploying loan-service"
+
+
+  deploy-payment:
+
+    needs: package-payment
+    if: needs.detect-changes.outputs.payment == 'true'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Deploy Payment Service
         run: |
-          if [ -d payment-service ]; then
-            echo "Deploying payment-service"
-            ls payment-service
-          fi
+          echo "Deploying payment-service"
