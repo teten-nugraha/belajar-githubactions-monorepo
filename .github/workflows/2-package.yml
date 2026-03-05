@@ -1,0 +1,29 @@
+name: Package Services
+
+on:
+  workflow_run:
+    workflows: ["Build Services"]
+    types:
+      - completed
+
+jobs:
+
+  package:
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Package Loan Service
+        run: |
+          echo "Packaging loan service"
+          tar -czf loan-service.tar.gz loan-service
+
+      - name: Package Payment Service
+        run: |
+          echo "Packaging payment service"
+          tar -czf payment-service.tar.gz payment-service
